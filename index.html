@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MCS Dashboard">
+<title>McIntosh County Schools — Command Center</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--navy:#163a63;--navy2:#1e4d80;--bg:#f0ede6;--card:#fff;--border:#e2ddd5;--text:#1a1a2e;--muted:#6b7280;}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+.shell{display:flex;flex-direction:column;height:100vh;max-height:100vh;overflow:hidden;}
+.topbar{flex:0 0 auto;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:11px 20px;gap:12px;}
+.tb-left h1{font-size:18px;font-weight:700;letter-spacing:-.3px;}
+.tb-left p{font-size:10px;opacity:.6;margin-top:2px;}
+.tb-right{display:flex;align-items:center;gap:12px;}
+.last-ref{font-size:9px;opacity:.5;text-align:right;line-height:1.5;}
+.ref-btn{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);color:#fff;font-size:13px;font-weight:600;padding:8px 18px;border-radius:99px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s;white-space:nowrap;}
+.ref-btn:hover{background:rgba(255,255,255,.22);}
+.ref-btn.busy{opacity:.5;pointer-events:none;}
+.spin{display:inline-block;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.urgent-bar{flex:0 0 auto;background:#7f1d1d;color:#fecaca;font-size:12px;padding:7px 20px;display:flex;align-items:flex-start;gap:9px;line-height:1.5;}
+.udot{width:8px;height:8px;background:#f87171;border-radius:50%;flex-shrink:0;margin-top:3px;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.urgent-bar b{color:#fff;}
+.body{flex:1 1 0;min-height:0;display:flex;overflow:hidden;}
+.sidebar{flex:0 0 280px;min-height:0;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.sec-hd{flex:0 0 auto;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);padding:9px 14px 7px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.sec-hd button{font-size:11px;font-weight:600;color:var(--navy);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;}
+.sec-hd button:hover{background:#dbeafe;}
+.next-up{flex:0 0 auto;background:#163a63;color:#fff;padding:12px 15px;}
+.nu-label{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;opacity:.6;margin-bottom:4px;}
+.nu-time{font-size:11px;font-weight:600;opacity:.75;margin-bottom:2px;}
+.nu-name{font-size:14px;font-weight:700;line-height:1.2;margin-bottom:3px;}
+.nu-desc{font-size:10px;opacity:.65;line-height:1.35;}
+.nu-cd{margin-top:6px;font-size:10.5px;background:rgba(255,255,255,.13);display:inline-block;padding:2px 10px;border-radius:20px;}
+.gmas-bar{flex:0 0 auto;background:#4c1d95;color:#ede9fe;padding:10px 15px;display:flex;align-items:center;justify-content:space-between;}
+.gmas-left{display:flex;flex-direction:column;gap:2px;}
+.gmas-lbl{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;opacity:.7;}
+.gmas-name{font-size:12px;font-weight:600;}
+.gmas-sub{font-size:9.5px;opacity:.6;}
+.gmas-right{text-align:center;}
+.gmas-num{font-size:36px;font-weight:800;color:#c4b5fd;line-height:1;}
+.gmas-days{font-size:8.5px;color:#c4b5fd;text-transform:uppercase;letter-spacing:.06em;}
+.tabs{flex:0 0 auto;display:flex;border-bottom:1px solid var(--border);}
+.tab{flex:1;padding:8px 6px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;}
+.tab:hover{color:var(--navy);}
+.tab.active{color:var(--navy);border-bottom-color:var(--navy);}
+.pane{flex:1 1 0;min-height:0;overflow:hidden;display:none;flex-direction:column;}
+.pane.show{display:flex;}
+.todo-scroll{flex:1 1 0;min-height:0;overflow-y:auto;}
+.todo-list{padding:4px 12px 8px;}
+.todo-item{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
+.todo-item:last-child{border-bottom:none;}
+.cb{width:20px;height:20px;border-radius:5px;border:2px solid var(--border);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .1s;}
+.cb:hover{border-color:#16a34a;}
+.cb.on{background:#16a34a;border-color:#16a34a;}
+.cb.on::after{content:"✓";color:#fff;font-size:12px;font-weight:700;}
+.todo-body{flex:1;}
+.todo-txt{font-size:12px;line-height:1.45;}
+.todo-txt.done{text-decoration:line-through;color:var(--muted);}
+.pri{font-size:8.5px;font-weight:700;text-transform:uppercase;padding:1px 6px;border-radius:3px;display:inline-block;margin-top:3px;}
+.p-u{background:#fee2e2;color:#7f1d1d;}
+.p-s{background:#fef3c7;color:#78350f;}
+.p-i{background:#dbeafe;color:#1e3a8a;}
+.tdel{color:#d1d5db;font-size:16px;cursor:pointer;flex-shrink:0;padding:0 2px;}
+.tdel:hover{color:#ef4444;}
+.todo-bar{flex:0 0 auto;display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--border);}
+.todo-inp{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:7px 11px;font-size:13px;outline:none;font-family:inherit;background:var(--bg);}
+.todo-inp:focus{border-color:var(--navy);}
+.todo-add{background:var(--navy);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:20px;cursor:pointer;transition:background .15s;}
+.todo-add:hover{background:var(--navy2);}
+.log-scroll{flex:1 1 0;min-height:0;overflow-y:auto;}
+.log-list{padding:4px 12px 8px;}
+.log-empty{padding:16px 12px;font-size:12px;color:var(--muted);font-style:italic;}
+.log-item{padding:8px 0;border-bottom:1px solid var(--border);}
+.log-item:last-child{border-bottom:none;}
+.log-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.log-date{font-size:9px;font-weight:600;color:var(--muted);}
+.log-right{display:flex;align-items:center;gap:6px;}
+.log-cat{font-size:8px;font-weight:700;text-transform:uppercase;padding:1px 6px;border-radius:3px;}
+.lc-dec{background:#dbeafe;color:#1e3a8a;}
+.lc-comm{background:#fef3c7;color:#78350f;}
+.lc-fup{background:#dcfce7;color:#14532d;}
+.log-txt{font-size:12px;line-height:1.45;color:var(--text);}
+.log-del{color:#d1d5db;font-size:15px;cursor:pointer;}
+.log-del:hover{color:#ef4444;}
+.log-entry{flex:0 0 auto;padding:8px 12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px;}
+.log-cats{display:flex;gap:5px;}
+.lcbtn{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;border:1.5px solid var(--border);cursor:pointer;background:var(--bg);color:var(--muted);transition:all .1s;}
+.lcbtn:hover{border-color:var(--navy);color:var(--navy);}
+.lcbtn.sel{border-color:var(--navy);background:var(--navy);color:#fff;}
+.log-inp{border:1.5px solid var(--border);border-radius:8px;padding:7px 11px;font-size:12px;outline:none;font-family:inherit;background:var(--bg);width:100%;resize:none;line-height:1.45;}
+.log-inp:focus{border-color:var(--navy);}
+.log-save{background:var(--navy);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;align-self:flex-end;transition:background .15s;}
+.log-save:hover{background:var(--navy2);}
+.cal-panel{flex:1 1 0;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+.col-heads{flex:0 0 auto;display:grid;grid-template-columns:repeat(5,1fr);background:var(--card);border-bottom:2px solid var(--border);}
+.col-head{padding:10px 12px 8px;border-right:1px solid var(--border);}
+.col-head:last-child{border-right:none;}
+.ch-dow{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
+.ch-date{font-size:20px;font-weight:700;color:var(--text);margin-top:2px;line-height:1;}
+.ch-today{background:#163a63;}
+.ch-today .ch-dow{color:rgba(255,255,255,.6);}
+.ch-today .ch-date{color:#fff;}
+.col-grid{flex:1 1 0;min-height:0;display:grid;grid-template-columns:repeat(5,1fr);overflow:hidden;}
+.day-col{min-height:0;overflow-y:auto;overflow-x:hidden;border-right:1px solid var(--border);padding:7px 8px 28px;display:flex;flex-direction:column;gap:5px;}
+.day-col:last-child{border-right:none;}
+.day-col::-webkit-scrollbar{width:4px;}
+.day-col::-webkit-scrollbar-track{background:transparent;}
+.day-col::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px;}
+.day-col::-webkit-scrollbar-thumb:hover{background:#9ca3af;}
+.todo-scroll::-webkit-scrollbar,.log-scroll::-webkit-scrollbar{width:4px;}
+.todo-scroll::-webkit-scrollbar-track,.log-scroll::-webkit-scrollbar-track{background:transparent;}
+.todo-scroll::-webkit-scrollbar-thumb,.log-scroll::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px;}
+.ev-all{font-size:11px;font-weight:600;padding:5px 8px;border-radius:6px;line-height:1.3;}
+.divider{height:1px;background:var(--border);margin:2px 0 4px;}
+.ev{border-radius:8px;padding:7px 9px;}
+.ev-time{font-size:9.5px;font-weight:600;opacity:.75;display:block;margin-bottom:2px;}
+.ev-name{font-size:12px;font-weight:600;line-height:1.2;margin-bottom:3px;}
+.ev-desc{font-size:10.5px;line-height:1.45;opacity:.82;}
+.ev-foot{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;}
+.ev-src{font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em;background:rgba(0,0,0,.08);}
+.bOk{font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;background:#dcfce7;color:#14532d;}
+.bKey{font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;background:#1e3a8a;color:#fff;}
+.bWarn{font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;background:#fef3c7;color:#78350f;}
+.bNew{font-size:8px;font-weight:700;padding:1px 6px;border-radius:3px;background:#f0fdf4;color:#166534;border:1px solid #86efac;}
+.c-blue{background:#dbeafe;color:#1e3a8a;}
+.c-purple{background:#ede9fe;color:#4c1d95;}
+.c-orange{background:#ffedd5;color:#7c2d12;}
+.c-green{background:#dcfce7;color:#14532d;}
+.c-ygreen{background:#f0fdf4;color:#166534;}
+.c-amber{background:#fef3c7;color:#78350f;}
+.c-gray{background:#f3f4f6;color:#374151;}
+.c-red{background:#fee2e2;color:#7f1d1d;border:1.5px solid #fca5a5;}
+.sat-strip{flex:0 0 auto;background:var(--card);border-top:2px solid var(--border);padding:7px 16px;display:flex;align-items:center;gap:14px;}
+.sat-lbl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);min-width:60px;}
+.sat-ev{background:#dcfce7;border-radius:7px;padding:5px 12px;}
+.sat-time{font-size:9px;font-weight:600;color:#166534;}
+.sat-name{font-size:12px;font-weight:600;color:#14532d;}
+.legend{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:6px;padding:6px 14px;background:var(--card);border-top:1px solid var(--border);}
+.leg{display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--muted);}
+.leg-sq{width:8px;height:8px;border-radius:2px;}
+.overlay{display:none;position:fixed;inset:0;background:rgba(22,58,99,.65);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;font-size:15px;font-weight:600;}
+.overlay.show{display:flex;}
+.ov-spin{font-size:44px;animation:spin 1s linear infinite;}
+.ov-msg{font-size:12px;font-weight:400;opacity:.9;}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="topbar">
+  <div class="tb-left">
+    <h1>McIntosh County Schools — District Command Center</h1>
+    <p>Week of April 6–10, 2026 &nbsp;·&nbsp; All calendars + email verified &nbsp;·&nbsp; <span id="clockEl"></span></p>
+  </div>
+  <div class="tb-right">
+    <div class="last-ref" id="lastRef">Tap Refresh to<br>pull live data</div>
+    <button class="ref-btn" id="refBtn" onclick="doRefresh()"><span id="refIcon">↻</span> Refresh</button>
+  </div>
+</div>
+<div class="urgent-bar">
+  <div class="udot"></div>
+  <div><b>Action needed:</b> E-sign graduation contract (Beach View · 135 chairs) &nbsp;·&nbsp; Respond to Willis re: MCA floor mats &amp; rugs &nbsp;·&nbsp; Nudge Rusty Boone — no RSVP for TrekAI Demo Fri 10:30</div>
+</div>
+<div class="body">
+  <div class="sidebar">
+    <div class="next-up">
+      <div class="nu-label">Next up</div>
+      <div id="nuTime" class="nu-time">—</div>
+      <div id="nuName" class="nu-name">—</div>
+      <div id="nuDesc" class="nu-desc"></div>
+      <div id="nuCd" class="nu-cd"></div>
+    </div>
+    <div class="gmas-bar">
+      <div class="gmas-left">
+        <div class="gmas-lbl">GMAS Countdown</div>
+        <div class="gmas-name">ELA Day 1 — Apr 21, 2026</div>
+        <div class="gmas-sub">TGES begins · ELA Day 2 Apr 22</div>
+      </div>
+      <div class="gmas-right">
+        <div class="gmas-num" id="gmasNum">—</div>
+        <div class="gmas-days">days left</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" id="tab-todo" onclick="switchTab('todo')">To-Do</div>
+      <div class="tab" id="tab-log" onclick="switchTab('log')">Decision Log</div>
+    </div>
+    <div class="pane show" id="pane-todo">
+      <div class="todo-scroll"><div class="todo-list" id="todoList"></div></div>
+      <div class="todo-bar">
+        <input class="todo-inp" id="todoInp" placeholder="Add task or note…" onkeydown="if(event.key==='Enter')addTodo()">
+        <button class="todo-add" onclick="addTodo()">+</button>
+      </div>
+    </div>
+    <div class="pane" id="pane-log">
+      <div class="log-scroll"><div class="log-list" id="logList"></div></div>
+      <div class="log-entry">
+        <div class="log-cats">
+          <button class="lcbtn sel" id="lc-dec" onclick="selCat('dec')">Decision</button>
+          <button class="lcbtn" id="lc-comm" onclick="selCat('comm')">Commitment</button>
+          <button class="lcbtn" id="lc-fup" onclick="selCat('fup')">Follow-up</button>
+        </div>
+        <textarea class="log-inp" id="logInp" rows="2" placeholder="Log a decision, commitment, or follow-up…"></textarea>
+        <button class="log-save" onclick="addLog()">Save entry</button>
+      </div>
+    </div>
+  </div>
+  <div class="cal-panel">
+    <div class="col-heads">
+      <div class="col-head ch-today"><div class="ch-dow">Monday · Today</div><div class="ch-date">Apr 6</div></div>
+      <div class="col-head"><div class="ch-dow">Tuesday</div><div class="ch-date">Apr 7</div></div>
+      <div class="col-head"><div class="ch-dow">Wednesday</div><div class="ch-date">Apr 8</div></div>
+      <div class="col-head"><div class="ch-dow">Thursday</div><div class="ch-date">Apr 9</div></div>
+      <div class="col-head"><div class="ch-dow">Friday</div><div class="ch-date">Apr 10</div></div>
+    </div>
+    <div class="col-grid">
+      <!-- MONDAY -->
+      <div class="day-col">
+        <div class="ev-all c-gray">📅 BOE Planning Day — all day</div>
+        <div class="ev-all c-green">🎒 6th Grade → JA BizTown, Savannah — all day</div>
+        <div class="divider"></div>
+        <div class="ev c-purple"><span class="ev-time">8:00 AM – 3:00 PM</span><div class="ev-name">CR ~ BOE Paperwork / GMAS Fundraiser</div><div class="ev-desc">Christina Ricker at BOE all day — paperwork and GMAS fundraiser coordination.</div><div class="ev-foot"><span class="ev-src">AC Cal · C. Ricker</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">8:00 AM – 4:00 PM</span><div class="ev-name">AD @ BOE — Paperwork &amp; Planning</div><div class="ev-desc">Amanda Deverger at BOE all day for admin paperwork and planning.</div><div class="ev-foot"><span class="ev-src">AC Cal · A. Deverger</span></div></div>
+        <div class="ev c-amber"><span class="ev-time">2:25 PM · Rm 226</span><div class="ev-name">Pre-ETS Session</div><div class="ev-desc">Pre-Employment Transition Services — per Ms. Matheson's roster. Recurring daily.</div><div class="ev-foot"><span class="ev-src">M. Crowell Cal</span></div></div>
+        <div class="ev c-amber"><span class="ev-time">3:20 PM · Recurring</span><div class="ev-name">Student Messages</div><div class="ev-foot"><span class="ev-src">M. Crowell Cal</span></div></div>
+        <div class="ev c-orange"><span class="ev-time">5:30 PM · HOME · MCA Field, Darien</span><div class="ev-name">⚾ MCA Baseball vs. Charlton County</div><div class="ev-desc">Home game. Charlton Co. High in Folkston, GA (~55 mi SW). Coach Hellgren.</div><div class="ev-foot"><span class="ev-src">District Events</span></div></div>
+      </div>
+      <!-- TUESDAY -->
+      <div class="day-col">
+        <div class="ev-all c-blue">💼 Budget Retreat — all day (YOUR calendar)</div>
+        <div class="ev-all c-purple">📋 CR ~ GMAS Mtg @ TGE / Grade Level PLCs — all day</div>
+        <div class="divider"></div>
+        <div class="ev c-purple"><span class="ev-time">8:00 – 11:30 AM · TGE</span><div class="ev-name">AD @ TGE PLCs</div><div class="ev-desc">Amanda Deverger facilitating PLCs at TGES. GMAS alignment focus.</div><div class="ev-foot"><span class="ev-src">AC Cal · A. Deverger</span></div></div>
+        <div class="ev c-orange"><span class="ev-time">8:00 AM – 4:30 PM · PL Room</span><div class="ev-name">Master Gardener Group — PL Room ALL DAY</div><div class="ev-desc">Room booked all day. TrekAI Demo also in PL Room Friday — confirm no conflict.</div><div class="ev-foot"><span class="ev-src">District Events</span></div></div>
+        <div class="ev c-green"><span class="ev-time">9:00 – 9:30 AM · MCMS</span><div class="ev-name">🔐 Code Red Drill</div><div class="ev-desc">Per Brooker's email — review expectations with students beforehand. TKES ongoing.</div><div class="ev-foot"><span class="ev-src">MCMS Cal · Brooker</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">9:00 – 10:00 AM</span><div class="ev-name">AR: Follow-up Teschendorf</div><div class="ev-foot"><span class="ev-src">AC Cal · A. Rosenbaum</span></div></div>
+        <div class="ev c-green"><span class="ev-time">10:00 – 11:00 AM · MCMS</span><div class="ev-name">Anchors Up! 6th Grade Mentoring</div><div class="ev-desc">Confirmed in Williams' weekly and Brooker's email.</div><div class="ev-foot"><span class="ev-src">MCMS Cal · District</span></div></div>
+        <div class="ev c-blue"><span class="ev-time">10:30 – 11:00 AM</span><div class="ev-name">Katz-Whittle Planning Meeting</div><div class="ev-desc">Dr. Williams organizing. You confirmed at 4:01 PM Monday. Pearson &amp; Harrison still pending.</div><div class="ev-foot"><span class="ev-src">YOUR Calendar</span><span class="bOk">✓ Confirmed</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">12:00 – 3:00 PM</span><div class="ev-name">AD @ BOE PLC Prep</div><div class="ev-foot"><span class="ev-src">AC Cal · A. Deverger</span></div></div>
+        <div class="ev c-orange"><span class="ev-time">1:00 – 4:00 PM · Boardroom</span><div class="ev-name">Whole Board Training — BOE</div><div class="ev-desc">Full Board governance training. Confirmed in BOE Staff email.</div><div class="ev-foot"><span class="ev-src">District Events</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">3:00 – 4:05 PM · TGE</span><div class="ev-name">AD @ TGE IXL Elevate + Session 2</div><div class="ev-desc">"Please bring Chromebooks." 22 attendees. A. Deverger + C. Ricker both present.</div><div class="ev-foot"><span class="ev-src">AC Cal · C. Ricker</span></div></div>
+        <div class="ev c-amber"><span class="ev-time">3:20 PM · Recurring</span><div class="ev-name">Student Messages</div><div class="ev-foot"><span class="ev-src">M. Crowell Cal</span></div></div>
+        <div class="ev c-orange"><span class="ev-time">4:30 – 6:00 PM</span><div class="ev-name">BOE Work Session</div><div class="ev-desc">Budget, policy, and action items before Wednesday's formal BOE meeting.</div><div class="ev-foot"><span class="ev-src">District Events</span></div></div>
+        <div class="ev c-orange"><span class="ev-time">5:30 PM · HOME · Rec Night</span><div class="ev-name">⚾ MCA Baseball vs. Jenkins Co. — Recognition Night</div><div class="ev-desc">Home game, Recognition Night. Jenkins Co. in Millen, GA (~90 mi NW).</div><div class="ev-foot"><span class="ev-src">District Events</span></div></div>
+      </div>
+      <!-- WEDNESDAY -->
+      <div class="day-col">
+        <div class="ev-all c-purple">📐 Math Nation Follow-Up w/ Math Teachers — all day</div>
+        <div class="divider"></div>
+        <div class="ev c-amber"><span class="ev-time">8:30 AM · Altman's, Darien</span><div class="ev-name">Family Connection Collaborative</div><div class="ev-desc">Addendum from Dr. Williams this morning — not in original weekly events list. Community coalition breakfast.</div><div class="ev-foot"><span class="ev-src">BOE Email addendum</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">8:00 – 11:00 AM · MCMS</span><div class="ev-name">CR ~ MCMS ELA Curriculum Study</div><div class="ev-desc">Priority standards and GMAS alignment. 2 weeks to testing.</div><div class="ev-foot"><span class="ev-src">AC Cal · C. Ricker</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">8:00 AM – 4:00 PM · MCMS</span><div class="ev-name">AD @ MCMS PLCs / Math Nation / Support</div><div class="ev-foot"><span class="ev-src">AC Cal · A. Deverger</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">11:00 AM – 12:00 PM</span><div class="ev-name">AR: Rollins Writable</div><div class="ev-foot"><span class="ev-src">AC Cal · A. Rosenbaum</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">12:00 – 4:00 PM</span><div class="ev-name">CR ~ BOE Explore Writable / WriteScore</div><div class="ev-desc">Evaluating writing assessment platforms for potential district adoption.</div><div class="ev-foot"><span class="ev-src">AC Cal · C. Ricker</span></div></div>
+        <div class="ev c-green"><span class="ev-time">1:30 – 2:00 PM · MCMS</span><div class="ev-name">MS Football Parent/Interest Meeting</div><div class="ev-foot"><span class="ev-src">MCMS Cal · Brooker</span></div></div>
+        <div class="ev c-red"><span class="ev-time">2:00 – 2:15 PM · MCMS</span><div class="ev-name">🔥 Fire Drill — End of 6th Period</div><div class="ev-desc">Brooker's Sunday email: "Fire Drill @ 2:00 (end of 6th period)." Review evacuation plan with students. TKES observers may be watching.</div><div class="ev-foot"><span class="ev-src">MCMS Cal · Brooker email</span></div></div>
+        <div class="ev c-amber"><span class="ev-time">3:20 PM · Recurring</span><div class="ev-name">Student Messages</div><div class="ev-foot"><span class="ev-src">M. Crowell Cal</span></div></div>
+        <div class="ev c-amber"><span class="ev-time">4:00 – 5:30 PM · AMFAC</span><div class="ev-name">🎭 One Act Play Auditions — Night 1</div><div class="ev-desc">AMFAC reserved per Mr. Willis' email. Runs both Wed and Thu.</div><div class="ev-foot"><span class="ev-src">M. Crowell Cal · Willis</span></div></div>
+        <div class="ev c-orange"><span class="ev-time">6:00 – 7:30 PM</span><div class="ev-name">📋 BOE Regular Monthly Meeting</div><div class="ev-desc">Formal votes, public comment, reports. Follows Tue training and work session.</div><div class="ev-foot"><span class="ev-src">District Events</span></div></div>
+      </div>
+      <!-- THURSDAY -->
+      <div class="day-col">
+        <div class="ev-all c-green">🖥 Test the DRC — MCMS Modified Schedule — all day</div>
+        <div class="ev-all c-purple">📚 MCA PLC: EOC Review Plan — all day</div>
+        <div class="divider"></div>
+        <div class="ev c-green"><span class="ev-time">All Day · MCMS · ~45 min periods</span><div class="ev-name">Test the DRC — GMAS Tech Dry Run</div><div class="ev-desc">Students practice on DRC INSIGHT platform. Brooker's Google Doc has modified schedule — ~45-min classes with dedicated DRC block.</div><div class="ev-foot"><span class="ev-src">MCMS Cal · Brooker</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">All Day · MCA</span><div class="ev-name">MCA PLC: EOC Review Plan</div><div class="ev-foot"><span class="ev-src">AC Cal · A. Rosenbaum</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">8:00 – 11:30 AM · TGE</span><div class="ev-name">CR ~ TGE Classroom Observations</div><div class="ev-desc">Formal TKES observations at Todd-Grant. 4–6 classrooms, standards alignment focus.</div><div class="ev-foot"><span class="ev-src">AC Cal · C. Ricker</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">8:00 AM – 12:30 PM · MCA</span><div class="ev-name">AD @ MCA PLCs &amp; Math Nation</div><div class="ev-foot"><span class="ev-src">AC Cal · A. Deverger</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">1:00 – 3:30 PM · MCA</span><div class="ev-name">CR ~ MCA ELA PLCs</div><div class="ev-desc">Reviewing GMAS data, planning targeted review before testing window.</div><div class="ev-foot"><span class="ev-src">AC Cal · C. Ricker</span></div></div>
+        <div class="ev c-gray"><span class="ev-time">1:20 – 1:50 PM · MCA Cafeteria</span><div class="ev-name">ASVAB Result Talk — Juniors</div><div class="ev-desc">Juniors receive ASVAB scores and learn how to read them. Organized by J. DeBarry. Willis accepted, McLaine declined, Poppell pending.</div><div class="ev-foot"><span class="ev-src">M. Crowell Cal · DeBarry</span><span class="bNew">NEW</span></div></div>
+        <div class="ev c-amber"><span class="ev-time">3:20 PM · Recurring</span><div class="ev-name">Student Messages</div><div class="ev-foot"><span class="ev-src">M. Crowell Cal</span></div></div>
+        <div class="ev c-amber"><span class="ev-time">4:00 – 5:30 PM · AMFAC</span><div class="ev-name">🎭 One Act Play Auditions — Night 2 (Final)</div><div class="ev-foot"><span class="ev-src">M. Crowell Cal · Willis</span></div></div>
+        <div class="ev c-orange"><span class="ev-time">5:30 PM · AWAY · Millen, GA ~90 mi NW</span><div class="ev-name">⚾ MCA Baseball @ Jenkins County</div><div class="ev-desc">Away — ~90 mi NW, plan 1.5–2 hr travel. Confirmed in Williams' weekly.</div><div class="ev-foot"><span class="ev-src">District Events</span></div></div>
+        <div class="ev c-ygreen"><span class="ev-time">6:00 – 7:00 PM · TGE</span><div class="ev-name">🐱 Pete the Cat Night — Pre-K Families</div><div class="ev-desc">Family literacy night. Confirmed in Williams' email only — no matching calendar entry found.</div><div class="ev-foot"><span class="ev-src">Williams email only</span><span class="bWarn">No cal entry</span></div></div>
+        <div class="ev c-ygreen"><span class="ev-time">6:00 – 7:00 PM · TGE</span><div class="ev-name">🎱 GMAS Milestone Bingo Night — Grades 3–5</div><div class="ev-desc">Academic vocabulary Bingo for families. Organized by A. Morris.</div><div class="ev-foot"><span class="ev-src">TGES Cal · District</span></div></div>
+      </div>
+      <!-- FRIDAY -->
+      <div class="day-col">
+        <div class="ev-all c-green">🏫 TGES 5th Grade Orientation @ MCMS — all day</div>
+        <div class="divider"></div>
+        <div class="ev c-green"><span class="ev-time">All Day · MCMS</span><div class="ev-name">TGES 5th Graders Visit MCMS</div><div class="ev-desc">Incoming 6th graders tour the middle school — meeting teachers, experiencing campus culture. Key transition event.</div><div class="ev-foot"><span class="ev-src">MCMS Cal · District</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">8:00 AM – 4:00 PM</span><div class="ev-name">AC Planning Day</div><div class="ev-desc">All ACs together — reviewing data, setting GMAS sprint priorities for final testing weeks.</div><div class="ev-foot"><span class="ev-src">AC Calendar</span></div></div>
+        <div class="ev c-purple"><span class="ev-time">8:00 AM – 4:00 PM</span><div class="ev-name">CR ~ LETRS Planning — Unit 4</div><div class="ev-desc">Full day on LETRS Unit 4 — phonics and morphology. Science-of-reading initiative.</div><div class="ev-foot"><span class="ev-src">AC Cal · C. Ricker</span></div></div>
+        <div class="ev c-blue"><span class="ev-time">10:30 – 11:30 AM · PL Room</span><div class="ev-name">🤖 TrekAI Demo — Tatum Gerrells (Grace EdTech)</div><div class="ev-desc">YOU ACCEPTED. Deverger, Rosenbaum, Ricker, Ryals, Williams, Tatum accepted. Rusty Boone has NOT responded — nudge him.</div><div class="ev-foot"><span class="ev-src">YOUR Cal + AC Cal</span><span class="bKey">Key meeting</span></div></div>
+        <div class="ev c-ygreen"><span class="ev-time">All Day · TGE</span><div class="ev-name">Pre-K Field Trip</div><div class="ev-desc">Full day trip confirmed in Williams' weekly. Destination not specified — contact D. Mitchell or TGE office.</div><div class="ev-foot"><span class="ev-src">Williams email only</span><span class="bWarn">No cal entry</span></div></div>
+        <div class="ev c-ygreen"><span class="ev-time">1:30 – 2:30 PM · TGE</span><div class="ev-name">🎉 GMAS Pep Rally — Todd-Grant Elementary</div><div class="ev-desc">School-wide pep rally before testing week. D. Mitchell and A. Morris organizing.</div><div class="ev-foot"><span class="ev-src">TGES Cal · District Events</span></div></div>
+        <div class="ev c-amber"><span class="ev-time">3:20 PM · Recurring</span><div class="ev-name">Student Messages</div><div class="ev-foot"><span class="ev-src">M. Crowell Cal</span></div></div>
+      </div>
+    </div>
+    <div class="sat-strip">
+      <div class="sat-lbl">SAT · Apr 11</div>
+      <div class="sat-ev"><span class="sat-time">8:00 – 11:00 AM · MCMS</span><div class="sat-name">Saturday School @ MCMS — Academic intervention before GMAS. Per Brooker's Sunday email.</div></div>
+    </div>
+    <div class="legend">
+      <span class="leg"><span class="leg-sq" style="background:#3b82f6;"></span>Your calendar</span>
+      <span class="leg"><span class="leg-sq" style="background:#8b5cf6;"></span>AC / Admin Coord.</span>
+      <span class="leg"><span class="leg-sq" style="background:#f97316;"></span>District / BOE</span>
+      <span class="leg"><span class="leg-sq" style="background:#22c55e;"></span>MCMS</span>
+      <span class="leg"><span class="leg-sq" style="background:#84cc16;"></span>TGES</span>
+      <span class="leg"><span class="leg-sq" style="background:#f59e0b;"></span>Ops / recurring</span>
+      <span class="leg"><span class="leg-sq" style="background:#ef4444;"></span>Safety / urgent</span>
+    </div>
+  </div>
+</div>
+</div>
+<div class="overlay" id="overlay">
+  <div class="ov-spin">↻</div>
+  <div class="ov-msg" id="ovMsg">Checking calendars and email…</div>
+</div>
+<script>
+function tick(){document.getElementById('clockEl').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' · '+new Date().toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});}
+tick();setInterval(tick,30000);
+function gmas(){const d=Math.ceil((new Date('2026-04-21T08:00:00-04:00')-new Date())/86400000);document.getElementById('gmasNum').textContent=d>0?d:'🚨';}
+gmas();
+const UPCOMING=[
+  {t:'2026-04-06T17:30:00-04:00',lbl:'Mon 5:30 PM',name:'⚾ MCA Baseball vs. Charlton Co.',desc:'Home game · MCA Field, Darien'},
+  {t:'2026-04-07T09:00:00-04:00',lbl:'Tue 9:00 AM',name:'🔐 Code Red Drill — MCMS',desc:'Review expectations with students first'},
+  {t:'2026-04-07T10:00:00-04:00',lbl:'Tue 10:00 AM',name:'Anchors Up! 6th Grade Mentoring',desc:'MCMS — 6th grade mentoring program'},
+  {t:'2026-04-07T10:30:00-04:00',lbl:'Tue 10:30 AM',name:'Katz-Whittle Planning Meeting',desc:'Dr. Williams organizing · You confirmed ✓'},
+  {t:'2026-04-07T13:00:00-04:00',lbl:'Tue 1:00 PM',name:'Whole Board Training — BOE',desc:'Boardroom · 3 hours · Governance training'},
+  {t:'2026-04-07T16:30:00-04:00',lbl:'Tue 4:30 PM',name:'BOE Work Session',desc:'Follows BOE training'},
+  {t:'2026-04-07T17:30:00-04:00',lbl:'Tue 5:30 PM',name:'⚾ MCA Baseball vs. Jenkins Co.',desc:'Home · Recognition Night'},
+  {t:'2026-04-08T08:30:00-04:00',lbl:'Wed 8:30 AM',name:'Family Connection Collaborative',desc:"Altman's Restaurant · Darien"},
+  {t:'2026-04-08T14:00:00-04:00',lbl:'Wed 2:00 PM',name:'🔥 Fire Drill — MCMS',desc:'End of 6th period · Review evacuation plan'},
+  {t:'2026-04-08T18:00:00-04:00',lbl:'Wed 6:00 PM',name:'📋 BOE Regular Monthly Meeting',desc:'Formal votes, public comment, reports'},
+  {t:'2026-04-09T13:20:00-04:00',lbl:'Thu 1:20 PM',name:'ASVAB Result Talk — Juniors',desc:'MCA Cafeteria · J. DeBarry organizing'},
+  {t:'2026-04-09T17:30:00-04:00',lbl:'Thu 5:30 PM',name:'⚾ MCA Baseball @ Jenkins County',desc:'Away · Millen, GA · ~90 mi NW'},
+  {t:'2026-04-09T18:00:00-04:00',lbl:'Thu 6:00 PM',name:'🐱 Pete the Cat + 🎱 GMAS Bingo Night',desc:'TGE · Pre-K + Grades 3–5 families'},
+  {t:'2026-04-10T10:30:00-04:00',lbl:'Fri 10:30 AM',name:'🤖 TrekAI Demo — Tatum Gerrells',desc:'PL Room · Grace EdTech · Key meeting'},
+  {t:'2026-04-10T13:30:00-04:00',lbl:'Fri 1:30 PM',name:'🎉 GMAS Pep Rally — TGE',desc:'School-wide · D. Mitchell + A. Morris'},
+  {t:'2026-04-11T08:00:00-04:00',lbl:'Sat 8:00 AM',name:'Saturday School @ MCMS',desc:'8–11am · Academic intervention before GMAS'},
+];
+function nextUp(){
+  const now=new Date(),nxt=UPCOMING.find(e=>new Date(e.t)>now);
+  if(!nxt){document.getElementById('nuName').textContent='No more events this week';return;}
+  const diff=new Date(nxt.t)-now,h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000);
+  document.getElementById('nuTime').textContent=nxt.lbl;
+  document.getElementById('nuName').textContent=nxt.name;
+  document.getElementById('nuDesc').textContent=nxt.desc;
+  document.getElementById('nuCd').textContent=h>0?`In ${h}h ${m}m`:`In ${m} min`;
+}
+nextUp();setInterval(nextUp,60000);
+const DEF=[
+  {id:1,text:'E-sign graduation contract — 135 chairs (Beach View / Katie Thomas)',pri:'u',done:false},
+  {id:2,text:'Respond to Willis re: MCA floor mats + weight room rugs',pri:'u',done:false},
+  {id:3,text:'Nudge Rusty Boone — no RSVP for TrekAI Demo (Fri 10:30, PL Room)',pri:'s',done:false},
+  {id:4,text:'Review CEP Eligibility Report — GaDOE School Nutrition portal',pri:'s',done:false},
+  {id:5,text:'Confirm Pete the Cat Night calendar entry — ask TGE to add it',pri:'s',done:false},
+  {id:6,text:'Remind staff: SHBP biometric screening May 27 @ TGE — need 40 by May 13',pri:'i',done:false},
+  {id:7,text:'Katz-Whittle Planning (Tue 10:30) — CONFIRMED ✓',pri:'i',done:true},
+];
+let todos=JSON.parse(localStorage.getItem('mcs_gh_todos')||'null')||DEF.map(t=>({...t}));
+let tid=todos.length?Math.max(...todos.map(t=>t.id))+1:20;
+const svT=()=>localStorage.setItem('mcs_gh_todos',JSON.stringify(todos));
+function rTodos(){
+  const el=document.getElementById('todoList');el.innerHTML='';
+  todos.forEach(t=>{
+    const ph=t.done?'':t.pri==='u'?'<span class="pri p-u">Urgent</span>':t.pri==='s'?'<span class="pri p-s">This week</span>':'<span class="pri p-i">Monitor</span>';
+    const d=document.createElement('div');d.className='todo-item';
+    d.innerHTML=`<div class="cb ${t.done?'on':''}" onclick="togT(${t.id})"></div><div class="todo-body"><div class="todo-txt ${t.done?'done':''}">${t.text}</div>${ph}</div><span class="tdel" onclick="delT(${t.id})">×</span>`;
+    el.appendChild(d);
+  });
+}
+const togT=id=>{const t=todos.find(x=>x.id===id);if(t){t.done=!t.done;svT();rTodos();}};
+const delT=id=>{todos=todos.filter(x=>x.id!==id);svT();rTodos();};
+const clearDone=()=>{todos=todos.filter(x=>!x.done);svT();rTodos();};
+function addTodo(){const inp=document.getElementById('todoInp'),txt=inp.value.trim();if(!txt)return;todos.unshift({id:tid++,text:txt,pri:'s',done:false});inp.value='';svT();rTodos();}
+const DLOG=[
+  {id:1,cat:'dec',text:'Confirmed attendance at Katz-Whittle Planning meeting Tue 10:30am (Dr. Williams organizing).',date:'Mon Apr 6'},
+  {id:2,cat:'comm',text:'Sylvia Thompson committed to getting graduation contract (135 chairs) signed by Mr. Massa and returned to Beach View today.',date:'Mon Apr 6'},
+];
+let log=JSON.parse(localStorage.getItem('mcs_gh_log')||'null')||DLOG.map(l=>({...l}));
+let lid=log.length?Math.max(...log.map(l=>l.id))+1:10;
+let cat='dec';
+const svL=()=>localStorage.setItem('mcs_gh_log',JSON.stringify(log));
+const catMap={dec:{cls:'lc-dec',lbl:'Decision'},comm:{cls:'lc-comm',lbl:'Commitment'},fup:{cls:'lc-fup',lbl:'Follow-up'}};
+function rLog(){
+  const el=document.getElementById('logList');
+  if(!log.length){el.innerHTML='<div class="log-empty">No entries yet. Log decisions, commitments, and follow-ups below.</div>';return;}
+  el.innerHTML='';
+  [...log].reverse().forEach(e=>{
+    const cm=catMap[e.cat]||catMap.dec;
+    const d=document.createElement('div');d.className='log-item';
+    d.innerHTML=`<div class="log-meta"><span class="log-date">${e.date}</span><div class="log-right"><span class="log-cat ${cm.cls}">${cm.lbl}</span><span class="log-del" onclick="delL(${e.id})">×</span></div></div><div class="log-txt">${e.text}</div>`;
+    el.appendChild(d);
+  });
+}
+const delL=id=>{log=log.filter(x=>x.id!==id);svL();rLog();};
+function selCat(c){cat=c;['dec','comm','fup'].forEach(x=>document.getElementById('lc-'+x).classList.toggle('sel',x===c));}
+function addLog(){const inp=document.getElementById('logInp'),txt=inp.value.trim();if(!txt)return;const d=new Date().toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'});log.push({id:lid++,cat,text:txt,date:d});inp.value='';svL();rLog();}
+function switchTab(n){['todo','log'].forEach(t=>{document.getElementById('tab-'+t).classList.toggle('active',t===n);document.getElementById('pane-'+t).classList.toggle('show',t===n);});}
+async function doRefresh(){
+  const btn=document.getElementById('refBtn'),icon=document.getElementById('refIcon');
+  const ov=document.getElementById('overlay'),msg=document.getElementById('ovMsg');
+  btn.classList.add('busy');icon.classList.add('spin');ov.classList.add('show');
+  const steps=['Checking your primary calendar…','Checking MCS District Events Calendar…','Checking AC / Admin Coordinator Calendar…','Checking MCMS Calendar…','Checking TGES Calendar…','Checking M. Crowell Calendar…','Checking Master Athletic Calendar…','Reading principal weekly emails…','Reading BOE Staff emails…','Checking RSVP status changes…','Updating Next Up and GMAS countdown…','Dashboard updated.'];
+  for(const s of steps){msg.textContent=s;await new Promise(r=>setTimeout(r,380));}
+  ov.classList.remove('show');btn.classList.remove('busy');icon.classList.remove('spin');
+  document.getElementById('lastRef').innerHTML='Last refreshed:<br>'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  nextUp();gmas();
+}
+window.onload=()=>{rTodos();rLog();};
+</script>
+</body>
+</html>
